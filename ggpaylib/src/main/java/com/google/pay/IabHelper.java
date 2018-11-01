@@ -752,6 +752,10 @@ public class IabHelper {
         queryInventoryAsync(false, null, null, listener);
     }
 
+    public void queryInventoryAsync(boolean querySkuDetails,List<String> moreItemSkus, QueryInventoryFinishedListener listener) throws IabAsyncInProgressException {
+        queryInventoryAsync(querySkuDetails, moreItemSkus, null, listener);
+    }
+
     public interface onResult {
         void ProductIds(ArrayList<String> al);
     }

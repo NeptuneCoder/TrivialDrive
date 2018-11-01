@@ -7,13 +7,15 @@ import android.util.Log;
 
 import org.json.JSONException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     private final Activity context;
     private final String base64EncodedPublicKey;
-    private final OnGooglePayStatusListener listener;
+    private final GooglePayStatus listener;
     private String TAG = this.getClass().getSimpleName();
     private IabBroadcastReceiver mBroadcastReceiver;
     private IabHelper mHelper;
@@ -28,7 +30,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
      * @param base64EncodedPublicKey 购买需要的公钥
      * @param listener               初始化和购买的回调
      */
-    public GooglePay(Activity context, String base64EncodedPublicKey, OnGooglePayStatusListener listener) {
+    public GooglePay(Activity context, String base64EncodedPublicKey, GooglePayStatus listener) {
         this.context = context;
         this.base64EncodedPublicKey = base64EncodedPublicKey;
         this.listener = listener;
@@ -37,8 +39,21 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
     public void setIsAutoConsume(boolean isAutoConsume) {
         this.isAutoConsume = isAutoConsume;
+
     }
 
+    private IQueryProductDetailListener queryItemDetailListener;
+
+    public void queryProductDetails(String itemId, IQueryProductDetailListener queryItemDetailListener) {
+        List<String> list = new ArrayList<>();
+        list.add(itemId);
+        this.queryItemDetailListener = queryItemDetailListener;
+        try {
+            mHelper.queryInventoryAsync(true, list, mGotProductDetailsListener);
+        } catch (IabHelper.IabAsyncInProgressException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void init() {
         // Some sanity checks to see if the developer (that's you!) really followed the
@@ -75,7 +90,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                     // Oh noes, there was a problem.
 //                    complain("Problem setting up in-app billing: " + result);
                     if (listener != null) {
-                        listener.initFailed(false);
+                        listener.initFailed(true);
                     }
                     return;
                 }
@@ -101,13 +116,123 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 } catch (IabHelper.IabAsyncInProgressException e) {
 //                    complain("Error querying inventory. Another async operation in progress.");
                     if (listener != null) {
-                        listener.onGgStatus(OnGooglePayStatusListener.QUERY_ERROR);
+                        listener.onGgStatus(GooglePayStatus.QUERY_ERROR);
                     }
                 }
             }
         });
     }
 
+    //TODO  购买的时候传入
+//    private String productId;
+    // Listener that's called when we finish querying the items and subscriptions we own
+    IabHelper.QueryInventoryFinishedListener mGotProductDetailsListener = new IabHelper.QueryInventoryFinishedListener() {
+
+        public void onQueryInventoryFinished(IabResult result, Inventory inventory) {
+            Log.d(TAG, "Query inventory finished.");
+
+            // Have we been disposed of in the meantime? If so, quit.
+            if (mHelper == null) return;
+
+            // Is it a failure?
+            if (result.isFailure()) {
+                if (queryItemDetailListener != null) {
+                    queryItemDetailListener.queryFailed();
+                }
+            } else {
+                Set<Map.Entry<String, SkuDetails>> entries = inventory.mSkuMap.entrySet();
+                if (entries.isEmpty()) {
+                    if (queryItemDetailListener != null) {
+                        queryItemDetailListener.queryFailed();
+                    }
+                } else {
+                    for (Map.Entry<String, SkuDetails> item : entries) {
+                        if (queryItemDetailListener != null) {
+                            SkuDetails value = item.getValue();
+                            queryItemDetailListener.querySuccess(value.getPriceAmountMicros(), value.getPriceCurrencyCode());
+                        }
+                    }
+                }
+            }
+
+
+            Log.d(TAG, "Query inventory was successful.");
+
+            /*
+             * Check for items we own. Notice that for each purchase, we check
+             * the developer payload to see if it's correct! See
+             * verifyDeveloperPayload().
+             */
+
+//            if (inventory != null) {
+//                Set<Map.Entry<String, Purchase>> entries = inventory.mPurchaseMap.entrySet();
+//
+//                for (Map.Entry<String, Purchase> item : entries) {
+//                    if (isAutoConsume) {
+//                        try {
+//                            mHelper.consumeAsync(item.getValue(), mConsumeFinishedListener);
+//                            Log.d(TAG, "We have gas. Consuming it successful." + item.getKey());
+//                        } catch (IabHelper.IabAsyncInProgressException e) {
+//                            if (listener != null) {
+//                                listener.onGgStatus(GooglePayStatus.CONSUME_ERROR);
+//                            }
+//                        }
+//                    } else {
+//                        if (listener != null) {
+//                            listener.unConsumeAsync(item.getValue());
+//                        }
+//                    }
+//                }
+//            }
+//            Set<String> strings = inventory.mPurchaseMap.keySet();
+//            for (String item : strings) {
+////                Purchase premiumPurchase = inventory.getPurchase(item);
+//                Log.d(TAG, "We have gas. Consuming it.  item:" + item);
+//                Purchase gasPurchase = inventory.getPurchase(item);
+//                if (gasPurchase != null && verifyDeveloperPayload(gasPurchase)) {
+//                    Log.d(TAG, "We have gas. Consuming it.");
+//                    try {
+//                        mHelper.consumeAsync(gasPurchase, mConsumeFinishedListener);
+//                        Log.d(TAG, "We have gas. Consuming it successful." + gasPurchase.getItemType());
+//                    } catch (IabHelper.IabAsyncInProgressException e) {
+//                        if (listener != null) {
+//                            listener.onGgFailed(GooglePayStatus.CONSUME_ERROR);
+//                        }
+//                    }
+//                }
+//
+//            }
+            // Do we have the premium upgrade?
+
+//            mIsPremium = (premiumPurchase != null && verifyDeveloperPayload(premiumPurchase));
+//            Log.d(TAG, "User is " + (mIsPremium ? "PREMIUM" : "NOT PREMIUM"));
+//
+//            // First find out which subscription is auto renewing
+////            Purchase gasMonthly = inventory.getPurchase(SKU_INFINITE_GAS_MONTHLY);
+////            Purchase gasYearly = inventory.getPurchase(SKU_INFINITE_GAS_YEARLY);
+////            if (gasMonthly != null && gasMonthly.isAutoRenewing()) {
+////                mInfiniteGasSku = SKU_INFINITE_GAS_MONTHLY;
+////                mAutoRenewEnabled = true;
+////            } else if (gasYearly != null && gasYearly.isAutoRenewing()) {
+////                mInfiniteGasSku = SKU_INFINITE_GAS_YEARLY;
+////                mAutoRenewEnabled = true;
+////            } else {
+////                mInfiniteGasSku = "";
+////                mAutoRenewEnabled = false;
+////            }
+//
+//            // The user is subscribed if either subscription exists, even if neither is auto
+//            // renewing
+////            boolean mSubscribedToInfiniteGas = (gasMonthly != null && verifyDeveloperPayload(gasMonthly))
+////                    || (gasYearly != null && verifyDeveloperPayload(gasYearly));
+////            Log.d(TAG, "User " + (mSubscribedToInfiniteGas ? "HAS" : "DOES NOT HAVE")
+////                    + " infinite gas subscription.");
+
+            // Check for gas delivery -- if we own gas, we should fill up the tank immediately
+
+
+        }
+    };
     //TODO  购买的时候传入
 //    private String productId;
     // Listener that's called when we finish querying the items and subscriptions we own
@@ -125,6 +250,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 }
                 return;
             }
+
 
             Log.d(TAG, "Query inventory was successful.");
 
@@ -144,7 +270,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                             Log.d(TAG, "We have gas. Consuming it successful." + item.getKey());
                         } catch (IabHelper.IabAsyncInProgressException e) {
                             if (listener != null) {
-                                listener.onGgStatus(OnGooglePayStatusListener.CONSUME_ERROR);
+                                listener.onGgStatus(GooglePayStatus.CONSUME_ERROR);
                             }
                         }
                     } else {
@@ -166,7 +292,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 //                        Log.d(TAG, "We have gas. Consuming it successful." + gasPurchase.getItemType());
 //                    } catch (IabHelper.IabAsyncInProgressException e) {
 //                        if (listener != null) {
-//                            listener.onGgFailed(OnGooglePayStatusListener.CONSUME_ERROR);
+//                            listener.onGgFailed(GooglePayStatus.CONSUME_ERROR);
 //                        }
 //                    }
 //                }
@@ -220,7 +346,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 }
             } else {
                 if (listener != null) {
-                    listener.onGgStatus(OnGooglePayStatusListener.CONSUME_FAILED);
+                    listener.onGgStatus(GooglePayStatus.CONSUME_FAILED);
                 }
             }
         }
@@ -294,8 +420,12 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        if (mPurchaseFinishedListener != null) {
-            mPurchaseFinishedListener.onIabPurchaseFinished(new IabResult(IabHelper.BILLING_RESPONSE_RESULT_OK, "Success"), purchase);
+        try {
+            mHelper.consumeAsync(purchase, mConsumeFinishedListener);
+        } catch (IabHelper.IabAsyncInProgressException e) {
+//                    complain("Error consuming gas. Another async operation in progress.");
+//                    setWaitScreen(false);
+            return;
         }
 //        if (mHelper != null) {
 //            try {
@@ -367,7 +497,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 //            complain("Error launching purchase flow. Another async operation in progress." + e);
 //            setWaitScreen(false);
             if (listener != null) {
-                listener.onGgStatus(OnGooglePayStatusListener.SUBS_FAILED);
+                listener.onGgStatus(GooglePayStatus.SUBS_FAILED);
             }
         }
     }
@@ -388,7 +518,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 //            complain("Error launching purchase flow. Another async operation in progress.");
 //            setWaitScreen(false);
             if (listener != null) {
-                listener.onGgStatus(OnGooglePayStatusListener.INAPP_FAILED);
+                listener.onGgStatus(GooglePayStatus.INAPP_FAILED);
             }
         }
     }
