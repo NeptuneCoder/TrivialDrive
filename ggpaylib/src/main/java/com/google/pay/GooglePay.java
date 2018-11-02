@@ -26,6 +26,8 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     //String base64EncodedPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApjWy+r9s6ncuh2l8OK59KrvySuTUQi5Zc1Sel/y2nVXh+7rEAVNV+Ndz75eJeT+mA3Y3uzRAfCuRR6lziyhE+5Jj330JtoWvi4SNJghVMSTs/uxK1B/Jg1GVUsYzC93QciBIEch22hCZWI93Gjq5UJ3OC5uy45YwIS4bYnjv2n7H37QSlfE1pzlNq8HktULpfD1lA6Sdc8NNRDl3c5OfUzIwYh6d2ErDjEa0EnIEksGBHlo3/zsgTwuG4Fm1DugNA/uQbvaps3tFSzc55afFWPuTtzVEVYqAvP2hJglklmmz0oZNWK8GYPg4iEeXlFWGSuWRT04zYVgJFj0LbJkGWQIDAQAB";
 
     /**
+     * 初始化Google pay
+     *
      * @param context                上下文参数
      * @param base64EncodedPublicKey 购买需要的公钥
      * @param listener               初始化和购买的回调
@@ -37,6 +39,11 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         init();
     }
 
+    /**
+     * 判断是否自动消耗，如果不自动消耗的情况，需要用户手动调用消耗方法，否者下次购买不能成功
+     *
+     * @param isAutoConsume
+     */
     public void setIsAutoConsume(boolean isAutoConsume) {
         this.isAutoConsume = isAutoConsume;
 
@@ -44,6 +51,12 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
     private IQueryProductDetailListener queryItemDetailListener;
 
+    /**
+     * 通过商品id，查询该商品是否存在，以及获取商品的价格和单位
+     *
+     * @param itemId                  商品id
+     * @param queryItemDetailListener
+     */
     public void queryProductDetails(String itemId, IQueryProductDetailListener queryItemDetailListener) {
         List<String> list = new ArrayList<>();
         list.add(itemId);
@@ -149,7 +162,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                     for (Map.Entry<String, SkuDetails> item : entries) {
                         if (queryItemDetailListener != null) {
                             SkuDetails value = item.getValue();
-                            queryItemDetailListener.querySuccess(value.getPriceAmountMicros(), value.getPriceCurrencyCode());
+                            queryItemDetailListener.querySuccess(value.getPriceAmountMicros(), value.getPriceCurrencyCode(), value.getTitle());
                         }
                     }
                 }
@@ -362,7 +375,9 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             if (result.isFailure()) {
 //                complain("Error purchasing: " + result);
 //                setWaitScreen(false);
-
+                if (listener != null && result.mResponse == IabHelper.IABHELPER_USER_CANCELLED) {
+                    listener.cancelParchase();
+                }
                 return;
             }
 //            if (!verifyDeveloperPayload(purchase)) {
@@ -407,6 +422,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     };
 
     /**
+     * 该方法用户手动消耗购买的商品。默认情况下，购买成功后不消耗商品。需要调用该方法。
      * 下面三个参数都是Purchase获取到的。
      *
      * @param mPurchasingItemType
@@ -528,6 +544,9 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         return mHelper.handleActivityResult(requestCode, resultCode, data);
     }
 
+    /**
+     * 释放资源，必须调用的方法。
+     */
     public void DestoryQuote() {
         // very important:
         if (mBroadcastReceiver != null) {

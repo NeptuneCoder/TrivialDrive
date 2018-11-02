@@ -2,6 +2,7 @@ package com.google.pay;
 
 public abstract class GooglePayStatus {
 
+    public static final int PARCHASE_CANCEL = -1005; //
     public static final int QUERY_ERROR = 10002; //查询异常
     public static final int QUERY_FAILED = 10003; //查询失败
     public static final int CONSUME_ERROR = 10004; //消耗异常
@@ -50,6 +51,10 @@ public abstract class GooglePayStatus {
      * @param purchase
      */
     public void unConsumeAsync(Purchase purchase) {
+
+    }
+
+    public void cancelParchase() {
 
     }
 

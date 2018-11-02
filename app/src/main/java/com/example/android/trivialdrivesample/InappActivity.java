@@ -36,7 +36,7 @@ public class InappActivity extends Activity {
             }
 
             public void onGgStatus(int code) {
-
+                Log.i("code", "code=" + code);
             }
 
             public void onBuySuccess(OrderParam data) {
@@ -71,8 +71,10 @@ public class InappActivity extends Activity {
             @Override
             public void onClick(View v) {
                 googlePay.queryProductDetails("vip_1_month", new IQueryProductDetailListener() {
+
+
                     @Override
-                    public void querySuccess(long price, String currency) {
+                    public void querySuccess(long price, String currency, String other) {
                         Log.i("price", "price = " + price + "     currency = " + currency);
                     }
 

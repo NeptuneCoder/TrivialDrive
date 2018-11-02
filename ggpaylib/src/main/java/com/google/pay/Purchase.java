@@ -18,10 +18,12 @@ package com.google.pay;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.Serializable;
+
 /**
  * Represents an in-app billing purchase.
  */
-public class Purchase {
+public class Purchase implements Serializable {
     String mItemType;  // ITEM_TYPE_INAPP or ITEM_TYPE_SUBS
     String mOrderId;
     String mPackageName;
@@ -49,18 +51,52 @@ public class Purchase {
         mSignature = signature;
     }
 
-    public String getItemType() { return mItemType; }
-    public String getOrderId() { return mOrderId; }
-    public String getPackageName() { return mPackageName; }
-    public String getSku() { return mSku; }
-    public long getPurchaseTime() { return mPurchaseTime; }
-    public int getPurchaseState() { return mPurchaseState; }
-    public String getDeveloperPayload() { return mDeveloperPayload; }
-    public String getToken() { return mToken; }
-    public String getOriginalJson() { return mOriginalJson; }
-    public String getSignature() { return mSignature; }
-    public boolean isAutoRenewing() { return mIsAutoRenewing; }
+    public String getItemType() {
+        return mItemType;
+    }
+
+    public String getOrderId() {
+        return mOrderId;
+    }
+
+    public String getPackageName() {
+        return mPackageName;
+    }
+
+    public String getSku() {
+        return mSku;
+    }
+
+    public long getPurchaseTime() {
+        return mPurchaseTime;
+    }
+
+    public int getPurchaseState() {
+        return mPurchaseState;
+    }
+
+    public String getDeveloperPayload() {
+        return mDeveloperPayload;
+    }
+
+    public String getToken() {
+        return mToken;
+    }
+
+    public String getOriginalJson() {
+        return mOriginalJson;
+    }
+
+    public String getSignature() {
+        return mSignature;
+    }
+
+    public boolean isAutoRenewing() {
+        return mIsAutoRenewing;
+    }
 
     @Override
-    public String toString() { return "PurchaseInfo(type:" + mItemType + "):" + mOriginalJson; }
+    public String toString() {
+        return "PurchaseInfo(type:" + mItemType + "):" + mOriginalJson;
+    }
 }
