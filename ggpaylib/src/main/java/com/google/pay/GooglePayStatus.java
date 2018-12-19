@@ -54,7 +54,11 @@ public abstract class GooglePayStatus {
 
     }
 
-    public void cancelParchase() {
+    public void cancelPurchase() {
+
+    }
+
+    public void haveGoodsUnConsume() {
 
     }
 

@@ -4,6 +4,8 @@ public interface IQueryProductDetailListener {
 
     void querySuccess(long price, String currency,String other);
 
-    void queryFailed();
+    void queryFailed(String msg);
+
+    void queryIdNoExist();
 
 }

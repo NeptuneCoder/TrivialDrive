@@ -13,11 +13,11 @@ android {
     buildToolsVersion "27.0.2"
 
     defaultConfig {
-        applicationId "ggpay.yiba.com.ggpay"
+        applicationId "com.foyo.gplay.yqfstw.novastar"
         minSdkVersion 14
         targetSdkVersion 27
-        versionCode 7
-        versionName "1.5"
+        versionCode 14
+        versionName "1.014"
     }
     buildTypes {
         release {

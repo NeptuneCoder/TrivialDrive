@@ -124,16 +124,30 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
                 // IAB is fully set up. Now, let's get an inventory of stuff we own.
                 Log.d(TAG, "Setup successful. Querying inventory.");
-                try {
-                    mHelper.queryInventoryAsync(mGotInventoryListener);
-                } catch (IabHelper.IabAsyncInProgressException e) {
-//                    complain("Error querying inventory. Another async operation in progress.");
-                    if (listener != null) {
-                        listener.onGgStatus(GooglePayStatus.QUERY_ERROR);
-                    }
-                }
+//                try {
+//                    mHelper.queryInventoryAsync(mGotInventoryListener);
+//                } catch (IabHelper.IabAsyncInProgressException e) {
+////                    complain("Error querying inventory. Another async operation in progress.");
+//                    if (listener != null) {
+//                        listener.onGgStatus(GooglePayStatus.QUERY_ERROR);
+//                    }
+//                }
             }
         });
+    }
+
+    public void handQueryInventoryAsync() {
+        Log.i(">>>>", "handAutoQueryInventoryAsync");
+        try {
+            if (mHelper != null) {
+                mHelper.queryInventoryAsync(mGotInventoryListener);
+            }
+        } catch (IabHelper.IabAsyncInProgressException e) {
+//                    complain("Error querying inventory. Another async operation in progress.");
+            if (listener != null) {
+                listener.onGgStatus(GooglePayStatus.QUERY_ERROR);
+            }
+        }
     }
 
     //TODO  购买的时候传入
@@ -150,13 +164,13 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             // Is it a failure?
             if (result.isFailure()) {
                 if (queryItemDetailListener != null) {
-                    queryItemDetailListener.queryFailed();
+                    queryItemDetailListener.queryFailed(result.mMessage);
                 }
             } else {
                 Set<Map.Entry<String, SkuDetails>> entries = inventory.mSkuMap.entrySet();
                 if (entries.isEmpty()) {
                     if (queryItemDetailListener != null) {
-                        queryItemDetailListener.queryFailed();
+                        queryItemDetailListener.queryIdNoExist();
                     }
                 } else {
                     for (Map.Entry<String, SkuDetails> item : entries) {
@@ -346,7 +360,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     IabHelper.OnConsumeFinishedListener mConsumeFinishedListener = new IabHelper.OnConsumeFinishedListener() {
         public void onConsumeFinished(Purchase purchase, IabResult result) {
             Log.d(TAG, "Consumption finished. Purchase: " + purchase + ", result: " + result);
-
             // if we were disposed of in the meantime, quit.
             if (mHelper == null) return;
 
@@ -376,7 +389,9 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 //                complain("Error purchasing: " + result);
 //                setWaitScreen(false);
                 if (listener != null && result.mResponse == IabHelper.IABHELPER_USER_CANCELLED) {
-                    listener.cancelParchase();
+                    listener.cancelPurchase();
+                } else if (listener != null && result.mResponse == IabHelper.BILLING_RESPONSE_RESULT_ITEM_ALREADY_OWNED) {
+                    listener.haveGoodsUnConsume();
                 }
                 return;
             }
