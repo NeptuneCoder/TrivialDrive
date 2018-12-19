@@ -46,7 +46,8 @@ public abstract class GooglePayStatus {
      * this.isAutoConsume = isAutoConsume;
      * }
      * <p>
-     * setIsAutoConsume 设置为true时，将会自动消耗不需要重写该方法，不会回调该方法。设置为false，需要手动调用消耗方法
+     * 当setIsAutoConsume 设置为true时，
+     * 将会回调该方法，根据自己的业务逻辑进行处理消耗商品逻辑
      *
      * @param purchase
      */
@@ -58,7 +59,14 @@ public abstract class GooglePayStatus {
 
     }
 
+    /**
+     * 购买时，有未消耗的商品，回调该方法
+     */
     public void haveGoodsUnConsume() {
+
+    }
+
+    public void ohterError(int status, String error) {
 
     }
 

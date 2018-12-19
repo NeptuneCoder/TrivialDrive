@@ -22,8 +22,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
     static final int RC_REQUEST = 10001;
     private boolean isAutoConsume = false;
-    //通过参数传入
-    //String base64EncodedPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApjWy+r9s6ncuh2l8OK59KrvySuTUQi5Zc1Sel/y2nVXh+7rEAVNV+Ndz75eJeT+mA3Y3uzRAfCuRR6lziyhE+5Jj330JtoWvi4SNJghVMSTs/uxK1B/Jg1GVUsYzC93QciBIEch22hCZWI93Gjq5UJ3OC5uy45YwIS4bYnjv2n7H37QSlfE1pzlNq8HktULpfD1lA6Sdc8NNRDl3c5OfUzIwYh6d2ErDjEa0EnIEksGBHlo3/zsgTwuG4Fm1DugNA/uQbvaps3tFSzc55afFWPuTtzVEVYqAvP2hJglklmmz0oZNWK8GYPg4iEeXlFWGSuWRT04zYVgJFj0LbJkGWQIDAQAB";
 
     /**
      * 初始化Google pay
@@ -122,20 +120,14 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 IntentFilter broadcastFilter = new IntentFilter(IabBroadcastReceiver.ACTION);
                 context.registerReceiver(mBroadcastReceiver, broadcastFilter);
 
-                // IAB is fully set up. Now, let's get an inventory of stuff we own.
-                Log.d(TAG, "Setup successful. Querying inventory.");
-//                try {
-//                    mHelper.queryInventoryAsync(mGotInventoryListener);
-//                } catch (IabHelper.IabAsyncInProgressException e) {
-////                    complain("Error querying inventory. Another async operation in progress.");
-//                    if (listener != null) {
-//                        listener.onGgStatus(GooglePayStatus.QUERY_ERROR);
-//                    }
-//                }
+
             }
         });
     }
 
+    /**
+     * 暴露给用户，自己控制查询未消耗商品的时机
+     */
     public void handQueryInventoryAsync() {
         Log.i(">>>>", "handAutoQueryInventoryAsync");
         try {
@@ -164,7 +156,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             // Is it a failure?
             if (result.isFailure()) {
                 if (queryItemDetailListener != null) {
-                    queryItemDetailListener.queryFailed(result.mMessage);
+                    queryItemDetailListener.queryFailed(result.mResponse, result.mMessage);
                 }
             } else {
                 Set<Map.Entry<String, SkuDetails>> entries = inventory.mSkuMap.entrySet();
@@ -184,79 +176,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
 
             Log.d(TAG, "Query inventory was successful.");
-
-            /*
-             * Check for items we own. Notice that for each purchase, we check
-             * the developer payload to see if it's correct! See
-             * verifyDeveloperPayload().
-             */
-
-//            if (inventory != null) {
-//                Set<Map.Entry<String, Purchase>> entries = inventory.mPurchaseMap.entrySet();
-//
-//                for (Map.Entry<String, Purchase> item : entries) {
-//                    if (isAutoConsume) {
-//                        try {
-//                            mHelper.consumeAsync(item.getValue(), mConsumeFinishedListener);
-//                            Log.d(TAG, "We have gas. Consuming it successful." + item.getKey());
-//                        } catch (IabHelper.IabAsyncInProgressException e) {
-//                            if (listener != null) {
-//                                listener.onGgStatus(GooglePayStatus.CONSUME_ERROR);
-//                            }
-//                        }
-//                    } else {
-//                        if (listener != null) {
-//                            listener.unConsumeAsync(item.getValue());
-//                        }
-//                    }
-//                }
-//            }
-//            Set<String> strings = inventory.mPurchaseMap.keySet();
-//            for (String item : strings) {
-////                Purchase premiumPurchase = inventory.getPurchase(item);
-//                Log.d(TAG, "We have gas. Consuming it.  item:" + item);
-//                Purchase gasPurchase = inventory.getPurchase(item);
-//                if (gasPurchase != null && verifyDeveloperPayload(gasPurchase)) {
-//                    Log.d(TAG, "We have gas. Consuming it.");
-//                    try {
-//                        mHelper.consumeAsync(gasPurchase, mConsumeFinishedListener);
-//                        Log.d(TAG, "We have gas. Consuming it successful." + gasPurchase.getItemType());
-//                    } catch (IabHelper.IabAsyncInProgressException e) {
-//                        if (listener != null) {
-//                            listener.onGgFailed(GooglePayStatus.CONSUME_ERROR);
-//                        }
-//                    }
-//                }
-//
-//            }
-            // Do we have the premium upgrade?
-
-//            mIsPremium = (premiumPurchase != null && verifyDeveloperPayload(premiumPurchase));
-//            Log.d(TAG, "User is " + (mIsPremium ? "PREMIUM" : "NOT PREMIUM"));
-//
-//            // First find out which subscription is auto renewing
-////            Purchase gasMonthly = inventory.getPurchase(SKU_INFINITE_GAS_MONTHLY);
-////            Purchase gasYearly = inventory.getPurchase(SKU_INFINITE_GAS_YEARLY);
-////            if (gasMonthly != null && gasMonthly.isAutoRenewing()) {
-////                mInfiniteGasSku = SKU_INFINITE_GAS_MONTHLY;
-////                mAutoRenewEnabled = true;
-////            } else if (gasYearly != null && gasYearly.isAutoRenewing()) {
-////                mInfiniteGasSku = SKU_INFINITE_GAS_YEARLY;
-////                mAutoRenewEnabled = true;
-////            } else {
-////                mInfiniteGasSku = "";
-////                mAutoRenewEnabled = false;
-////            }
-//
-//            // The user is subscribed if either subscription exists, even if neither is auto
-//            // renewing
-////            boolean mSubscribedToInfiniteGas = (gasMonthly != null && verifyDeveloperPayload(gasMonthly))
-////                    || (gasYearly != null && verifyDeveloperPayload(gasYearly));
-////            Log.d(TAG, "User " + (mSubscribedToInfiniteGas ? "HAS" : "DOES NOT HAVE")
-////                    + " infinite gas subscription.");
-
-            // Check for gas delivery -- if we own gas, we should fill up the tank immediately
-
 
         }
     };
@@ -286,7 +205,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
              * the developer payload to see if it's correct! See
              * verifyDeveloperPayload().
              */
-
             if (inventory != null) {
                 Set<Map.Entry<String, Purchase>> entries = inventory.mPurchaseMap.entrySet();
 
@@ -307,52 +225,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                     }
                 }
             }
-//            Set<String> strings = inventory.mPurchaseMap.keySet();
-//            for (String item : strings) {
-////                Purchase premiumPurchase = inventory.getPurchase(item);
-//                Log.d(TAG, "We have gas. Consuming it.  item:" + item);
-//                Purchase gasPurchase = inventory.getPurchase(item);
-//                if (gasPurchase != null && verifyDeveloperPayload(gasPurchase)) {
-//                    Log.d(TAG, "We have gas. Consuming it.");
-//                    try {
-//                        mHelper.consumeAsync(gasPurchase, mConsumeFinishedListener);
-//                        Log.d(TAG, "We have gas. Consuming it successful." + gasPurchase.getItemType());
-//                    } catch (IabHelper.IabAsyncInProgressException e) {
-//                        if (listener != null) {
-//                            listener.onGgFailed(GooglePayStatus.CONSUME_ERROR);
-//                        }
-//                    }
-//                }
-//
-//            }
-            // Do we have the premium upgrade?
-
-//            mIsPremium = (premiumPurchase != null && verifyDeveloperPayload(premiumPurchase));
-//            Log.d(TAG, "User is " + (mIsPremium ? "PREMIUM" : "NOT PREMIUM"));
-//
-//            // First find out which subscription is auto renewing
-////            Purchase gasMonthly = inventory.getPurchase(SKU_INFINITE_GAS_MONTHLY);
-////            Purchase gasYearly = inventory.getPurchase(SKU_INFINITE_GAS_YEARLY);
-////            if (gasMonthly != null && gasMonthly.isAutoRenewing()) {
-////                mInfiniteGasSku = SKU_INFINITE_GAS_MONTHLY;
-////                mAutoRenewEnabled = true;
-////            } else if (gasYearly != null && gasYearly.isAutoRenewing()) {
-////                mInfiniteGasSku = SKU_INFINITE_GAS_YEARLY;
-////                mAutoRenewEnabled = true;
-////            } else {
-////                mInfiniteGasSku = "";
-////                mAutoRenewEnabled = false;
-////            }
-//
-//            // The user is subscribed if either subscription exists, even if neither is auto
-//            // renewing
-////            boolean mSubscribedToInfiniteGas = (gasMonthly != null && verifyDeveloperPayload(gasMonthly))
-////                    || (gasYearly != null && verifyDeveloperPayload(gasYearly));
-////            Log.d(TAG, "User " + (mSubscribedToInfiniteGas ? "HAS" : "DOES NOT HAVE")
-////                    + " infinite gas subscription.");
-
-            // Check for gas delivery -- if we own gas, we should fill up the tank immediately
-
 
         }
     };
@@ -386,53 +258,24 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             if (mHelper == null) return;
 
             if (result.isFailure()) {
-//                complain("Error purchasing: " + result);
-//                setWaitScreen(false);
                 if (listener != null && result.mResponse == IabHelper.IABHELPER_USER_CANCELLED) {
                     listener.cancelPurchase();
                 } else if (listener != null && result.mResponse == IabHelper.BILLING_RESPONSE_RESULT_ITEM_ALREADY_OWNED) {
                     listener.haveGoodsUnConsume();
+                } else if (listener != null) {
+                    listener.ohterError(result.mResponse, result.mMessage);
                 }
                 return;
             }
-//            if (!verifyDeveloperPayload(purchase)) {
-////                complain("Error purchasing. Authenticity verification failed.");
-////                setWaitScreen(false);
-//                return;
-//            }
-
             Log.d(TAG, "Purchase successful.");
-//            if (purchase.getSku().equals(productId)) {
-            // bought 1/4 tank of gas. So consume it.
             Log.d(TAG, "Purchase is gas. Starting gas consumption.");
             if (isAutoConsume) {
                 try {
                     mHelper.consumeAsync(purchase, mConsumeFinishedListener);
                 } catch (IabHelper.IabAsyncInProgressException e) {
-//                    complain("Error consuming gas. Another async operation in progress.");
-//                    setWaitScreen(false);
                     return;
                 }
             }
-// else if (purchase.getSku().equals(SKU_1_MOUTH)) {
-//                // bought the premium upgrade!
-//                Log.d(TAG, "Purchase is premium upgrade. Congratulating user.");
-//                alert("Thank you for upgrading to premium!");
-//                mIsPremium = true;
-//                updateUi();
-//                setWaitScreen(false);
-//            } else if (purchase.getSku().equals(SKU_INFINITE_GAS_MONTHLY)
-//                    || purchase.getSku().equals(SKU_INFINITE_GAS_YEARLY)) {
-//                // bought the infinite gas subscription
-//                Log.d(TAG, "Infinite gas subscription purchased.");
-//                alert("Thank you for subscribing to infinite gas!");
-//                mSubscribedToInfiniteGas = true;
-//                mAutoRenewEnabled = purchase.isAutoRenewing();
-//                mInfiniteGasSku = purchase.getSku();
-//                mTank = TANK_MAX;
-//                updateUi();
-//                setWaitScreen(false);
-//            }
         }
     };
 
@@ -468,40 +311,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
     }
 
-//    /**
-//     * Verifies the developer payload of a purchase.
-//     */
-//    boolean verifyDeveloperPayload(Purchase p) {
-//        if (p == null) {
-//            return false;
-//        }
-//        String payload = p.getDeveloperPayload();
-//        Log.i("payload", "verifyDeveloperPayload:" + payload);
-//        return developerpayload.equals(payload);
-//        /*
-//         * TODO: verify that the developer payload of the purchase is correct. It will be
-//         * the same one that you sent when initiating the purchase.
-//         *
-//         * WARNING: Locally generating a random string when starting a purchase and
-//         * verifying it here might seem like a good approach, but this will fail in the
-//         * case where the user purchases an item on one device and then uses your app on
-//         * a different device, because on the other device you will not have access to the
-//         * random string you originally generated.
-//         *
-//         * So a good developer payload has these characteristics:
-//         *
-//         * 1. If two different users purchase an item, the payload is different between them,
-//         *    so that one user's purchase can't be replayed to another user.
-//         *
-//         * 2. The payload must be such that you can verify it even when the app wasn't the
-//         *    one who initiated the purchase flow (so that items purchased by the user on
-//         *    one device work on other devices owned by the user).
-//         *
-//         * Using your own server to store and verify developer payloads across app
-//         * installations is recommended.
-//         */
-//
-//    }
 
     @Override
     public void receivedBroadcast() {

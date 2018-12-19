@@ -82,9 +82,10 @@ public class InappActivity extends Activity {
                     }
 
                     @Override
-                    public void queryFailed(String msg) {
+                    public void queryFailed(int status, String msg) {
 
                     }
+
 
                     @Override
                     public void queryIdNoExist() {
