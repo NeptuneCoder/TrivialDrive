@@ -12,6 +12,8 @@ public abstract class GooglePayStatus {
 
     public static final int INAPP_FAILED = 10009; //调用购买方法失败
 
+    public static final int CHECK_INDENTITY_AUTH = 10011; //调用购买方法失败
+
     /**
      * 初始化失败是，调用该方法。在调用购买时，需要对该参数进行判断
      * https://www.jianshu.com/p/87ffdb7bc439

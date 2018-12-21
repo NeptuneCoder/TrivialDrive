@@ -83,13 +83,13 @@ public class InappActivity extends Activity {
 
                     @Override
                     public void queryFailed(int status, String msg) {
-
+                        Log.i("price", "status = " + status + "     msg = " + msg);
                     }
 
 
                     @Override
                     public void queryIdNoExist() {
-
+                        Log.i("price", "queryIdNoExist ");
                     }
 
 

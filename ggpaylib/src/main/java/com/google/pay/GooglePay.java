@@ -62,7 +62,15 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         try {
             mHelper.queryInventoryAsync(true, list, mGotProductDetailsListener);
         } catch (IabHelper.IabAsyncInProgressException e) {
+            if (mGotProductDetailsListener != null) {
+                mGotProductDetailsListener.onFailed(10, e.toString());
+            }
             e.printStackTrace();
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+            if (mGotProductDetailsListener != null) {
+                mGotProductDetailsListener.onFailed(10, e.toString());
+            }
         }
     }
 
@@ -178,6 +186,11 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             Log.d(TAG, "Query inventory was successful.");
 
         }
+
+        @Override
+        public void onFailed(int status, String string) {
+
+        }
     };
     //TODO  购买的时候传入
 //    private String productId;
@@ -226,6 +239,14 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 }
             }
 
+        }
+
+        @Override
+        public void onFailed(int status, String string) {
+            Log.i(">>>>", "string = >" + string);
+            if (listener != null) {
+                listener.onGgStatus(status);
+            }
         }
     };
     // Called when consumption is complete
@@ -301,13 +322,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 //                    setWaitScreen(false);
             return;
         }
-//        if (mHelper != null) {
-//            try {
-//                mHelper.consumeAsync(purchase, listener);
-//            } catch (IabHelper.IabAsyncInProgressException e) {
-//                e.printStackTrace();
-//            }
-//        }
 
     }
 
@@ -359,6 +373,10 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 //            setWaitScreen(false);
             if (listener != null) {
                 listener.onGgStatus(GooglePayStatus.INAPP_FAILED);
+            }
+        } catch (IllegalStateException e) {
+            if (listener != null) {
+                listener.onGgStatus(GooglePayStatus.CHECK_INDENTITY_AUTH);
             }
         }
     }

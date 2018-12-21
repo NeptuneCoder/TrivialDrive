@@ -242,6 +242,11 @@ public class MainActivity extends Activity implements IabBroadcastReceiver.IabBr
             setWaitScreen(false);
             Log.d(TAG, "Initial inventory query finished; enabling main UI.");
         }
+
+        @Override
+        public void onFailed(int status, String string) {
+
+        }
     };
 
     @Override

@@ -701,6 +701,8 @@ public class IabHelper {
          * @param inv    The inventory.
          */
         void onQueryInventoryFinished(IabResult result, Inventory inv);
+
+        void onFailed(int status, String string);
     }
 
 
@@ -752,7 +754,7 @@ public class IabHelper {
         queryInventoryAsync(false, null, null, listener);
     }
 
-    public void queryInventoryAsync(boolean querySkuDetails,List<String> moreItemSkus, QueryInventoryFinishedListener listener) throws IabAsyncInProgressException {
+    public void queryInventoryAsync(boolean querySkuDetails, List<String> moreItemSkus, QueryInventoryFinishedListener listener) throws IabAsyncInProgressException {
         queryInventoryAsync(querySkuDetails, moreItemSkus, null, listener);
     }
 
