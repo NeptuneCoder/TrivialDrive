@@ -732,6 +732,7 @@ public class IabHelper {
                     inv = queryInventory(querySkuDetails, moreItemSkus, moreSubsSkus);
                 } catch (IabException ex) {
                     result = ex.getResult();
+                } catch (NullPointerException e) {
                 }
 
                 flagEndAsync();

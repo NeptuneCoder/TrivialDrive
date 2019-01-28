@@ -23,6 +23,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     static final int RC_REQUEST = 10001;
     private boolean isAutoConsume = false;
 
+
     /**
      * 初始化Google pay
      *
@@ -134,6 +135,19 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     }
 
     /**
+     * 判断是否有初始化
+     *
+     * @return
+     */
+    public boolean isSetupDone() {
+        if (mHelper != null) {
+            return mHelper.mSetupDone;
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * 暴露给用户，自己控制查询未消耗商品的时机
      */
     public void handQueryInventoryAsync() {
@@ -159,7 +173,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             Log.d(TAG, "Query inventory finished.");
 
             // Have we been disposed of in the meantime? If so, quit.
-            if (mHelper == null) return;
+            if (mHelper == null || result == null) return;
 
             // Is it a failure?
             if (result.isFailure()) {
