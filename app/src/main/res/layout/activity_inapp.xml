@@ -21,4 +21,12 @@
         android:layout_height="wrap_content"
         android:text="更具商品id查询详细信息"
         app:layout_constraintTop_toBottomOf="@id/btn_inapp" />
+
+
+    <Button
+        android:id="@+id/btn_handle_query"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="手动查询测试"
+        app:layout_constraintTop_toBottomOf="@id/btn_query" />
 </android.support.constraint.ConstraintLayout>

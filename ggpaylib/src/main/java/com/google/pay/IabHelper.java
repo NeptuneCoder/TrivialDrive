@@ -1033,6 +1033,9 @@ public class IabHelper {
         boolean verificationFailed = false;
         String continueToken = null;
 
+        if (mService == null || mContext == null) {
+            return IABHELPER_VERIFICATION_FAILED;
+        }
         do {
             logDebug("Calling getPurchases with continuation token: " + continueToken);
             Bundle ownedItems = mService.getPurchases(3, mContext.getPackageName(),

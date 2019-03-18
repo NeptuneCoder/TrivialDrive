@@ -21,8 +21,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     private IabHelper mHelper;
 
     static final int RC_REQUEST = 10001;
-    private boolean isAutoConsume = false;
-
 
     /**
      * 初始化Google pay
@@ -40,11 +38,9 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
     /**
      * 判断是否自动消耗，如果不自动消耗的情况，需要用户手动调用消耗方法，否者下次购买不能成功
-     *
-     * @param isAutoConsume
      */
-    public void setIsAutoConsume(boolean isAutoConsume) {
-        this.isAutoConsume = isAutoConsume;
+    protected boolean isAutoConsume() {
+        return false;
 
     }
 
@@ -236,7 +232,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 Set<Map.Entry<String, Purchase>> entries = inventory.mPurchaseMap.entrySet();
 
                 for (Map.Entry<String, Purchase> item : entries) {
-                    if (isAutoConsume) {
+                    if (isAutoConsume()) {
                         try {
                             mHelper.consumeAsync(item.getValue(), mConsumeFinishedListener);
                             Log.d(TAG, "We have gas. Consuming it successful." + item.getKey());
@@ -304,7 +300,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             }
             Log.d(TAG, "Purchase successful.");
             Log.d(TAG, "Purchase is gas. Starting gas consumption.");
-            if (isAutoConsume) {
+            if (isAutoConsume()) {
                 try {
                     mHelper.consumeAsync(purchase, mConsumeFinishedListener);
                 } catch (IabHelper.IabAsyncInProgressException e) {
