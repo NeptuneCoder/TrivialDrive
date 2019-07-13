@@ -52,12 +52,7 @@ public class InappActivity extends Activity {
             }
         }));
 
-        findViewById(R.id.btn_handle_query).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                googlePay.queryInventoryAsync();
-            }
-        });
+        findViewById(R.id.btn_handle_query).setOnClickListener(v -> googlePay.queryInventoryAsync());
     }
 
 
@@ -99,7 +94,8 @@ public class InappActivity extends Activity {
 
         }
 
-        public void unConsumeAsync(Purchase purchase) {
+        @Override
+        public void unConsumeGoodsInfo(Purchase purchase) {
             //如果设置setIsAutoConsume未false，用户上次有未消耗的商品，会自动回调该方法，此时上传服务器校验，如果校验成功，手动调用消耗方法
             if (googlePay != null) {
                 googlePay.consumeAsync(purchase.getItemType(), purchase.getOriginalJson(), purchase.getSignature());
