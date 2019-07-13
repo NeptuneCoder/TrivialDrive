@@ -56,7 +56,7 @@
 -keep class com.google.pay.IabHelperCallbackListener{
        *;
 }
--keep class com.google.pay.GooglePayStatus{*;}
+-keep class com.google.pay.GooglePayStatusListener{*;}
 
 # 删除代码中Log相关的代码
 -assumenosideeffects class android.util.Log {

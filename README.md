@@ -172,12 +172,12 @@ CHANGELOG
              * @param boo
              */
             @Override
-            public void initFailed(boolean boo) {
+            public void initStatus(boolean boo) {
 
             }
 
             @Override
-            public void onGgStatus(int code) {
+            public void onErrorCode(int code) {
 
             }
 
@@ -251,7 +251,7 @@ CHANGELOG
 //            complain("Error launching purchase flow. Another async operation in progress.");
 //            setWaitScreen(false);
             if (listener != null) {
-                listener.onGgStatus(OnGooglePayStatusListener.INAPP_FAILED);
+                listener.onErrorCode(OnGooglePayStatusListener.INAPP_FAILED);
             }
         }
     }
@@ -274,7 +274,7 @@ CHANGELOG
 //            complain("Error launching purchase flow. Another async operation in progress." + e);
 //            setWaitScreen(false);
             if (listener != null) {
-                listener.onGgStatus(OnGooglePayStatusListener.SUBS_FAILED);
+                listener.onErrorCode(OnGooglePayStatusListener.SUBS_FAILED);
             }
         }
     }
@@ -294,14 +294,14 @@ CHANGELOG
      *
      * @param boo
      */
-    void initFailed(boolean boo);
+    void initStatus(boolean boo);
 
     /**
      * 各种的支付过程中的状态
      *
      * @param code
      */
-    void onGgStatus(int code);
+    void onErrorCode(int code);
 
     /**
      * 调用购买或订阅成功时会回调该方法

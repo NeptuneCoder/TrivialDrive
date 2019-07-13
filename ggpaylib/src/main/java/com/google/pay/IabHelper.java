@@ -76,7 +76,6 @@ import java.util.List;
  * has not yet completed will result in an exception being thrown.
  */
 public class IabHelper {
-    private final IabHelperCallbackListener listener;
     // Is debug logging enabled?
     boolean mDebugLog = false;
     String mDebugTag = "IabHelper";
@@ -179,10 +178,9 @@ public class IabHelper {
      *                        public key in your application's page on Google Play Developer Console. Note that this
      *                        is NOT your "developer public key".
      */
-    public IabHelper(Context ctx, String base64PublicKey, IabHelperCallbackListener listener) {
+    public IabHelper(Context ctx, String base64PublicKey) {
         mContext = ctx.getApplicationContext();
         mSignatureBase64 = base64PublicKey;
-        this.listener = listener;
         logDebug("IAB helper created.");
     }
 
@@ -588,18 +586,12 @@ public class IabHelper {
 
                     Log.i("Purchase", "Purchase = " + sku);
                     return true;
+                } else {
+                    logDebug("Purchase signature successfully verified.");
+                    mPurchaseListener.onIabPurchaseFinished(null, purchase);
                 }
-                logDebug("Purchase signature successfully verified.");
-                if (listener != null) {
-                    OrderParam param = new OrderParam();
-                    param.purchaseData = purchaseData;
-                    param.dataSignature = dataSignature;
-                    param.purchaseData = purchaseData;
-                    param.responseCode = responseCode;
-                    param.resultCode = resultCode;
-                    param.currBuyType = currBuyType;
-                    listener.onGgSuccess(param);
-                }
+
+
             } catch (JSONException e) {
                 logError("Failed to parse purchase data.");
                 e.printStackTrace();
@@ -659,7 +651,6 @@ public class IabHelper {
             if (r != BILLING_RESPONSE_RESULT_OK) {
                 throw new IabException(r, "Error refreshing inventory (querying owned items).");
             }
-
             if (querySkuDetails) {
                 r = querySkuDetails(ITEM_TYPE_INAPP, inv, moreItemSkus);
                 if (r != BILLING_RESPONSE_RESULT_OK) {
@@ -764,34 +755,30 @@ public class IabHelper {
     }
 
     public void queryGoods(final ArrayList<String> skuList, final String packageName, final onResult or) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Bundle querySkus = new Bundle();
-                    querySkus.putStringArrayList("ITEM_ID_LIST", skuList);
-                    Bundle skuDetails = mService.getSkuDetails(3,
-                            packageName, "inapp", querySkus);
-                    int response = skuDetails.getInt("RESPONSE_CODE");
-                    if (response == 0) {
-                        ArrayList<String> responseList
-                                = skuDetails.getStringArrayList("DETAILS_LIST");
-                        ArrayList<String> al = new ArrayList<>();
-                        for (String thisResponse : responseList) {
-                            JSONObject object = new JSONObject(thisResponse);
-                            String sku = object.getString("productId");
-                            String price = object.getString("price");
-
-                            Log.i("result", sku + "     " + price + "  developerPayload = ");
-                            al.add(sku);
-                        }
-                        if (or != null) {
-                            or.ProductIds(al);
-                        }
+        new Thread(() -> {
+            try {
+                Bundle querySkus = new Bundle();
+                querySkus.putStringArrayList("ITEM_ID_LIST", skuList);
+                Bundle skuDetails = mService.getSkuDetails(3,
+                        packageName, "inapp", querySkus);
+                int response = skuDetails.getInt("RESPONSE_CODE");
+                if (response == 0) {
+                    ArrayList<String> responseList
+                            = skuDetails.getStringArrayList("DETAILS_LIST");
+                    ArrayList<String> al = new ArrayList<>();
+                    for (String thisResponse : responseList) {
+                        JSONObject object = new JSONObject(thisResponse);
+                        String sku = object.getString("productId");
+                        String price = object.getString("price");
+                        Log.i("result", sku + "     " + price + "  developerPayload = ");
+                        al.add(sku);
                     }
-                } catch (Exception e) {
-
+                    if (or != null) {
+                        or.ProductIds(al);
+                    }
                 }
+            } catch (Exception e) {
+
             }
         }).start();
 
@@ -1165,33 +1152,31 @@ public class IabHelper {
             throws IabAsyncInProgressException {
         final Handler handler = new Handler();
         flagStartAsync("consume");
-        (new Thread(new Runnable() {
-            public void run() {
-                final List<IabResult> results = new ArrayList<IabResult>();
-                for (Purchase purchase : purchases) {
-                    try {
-                        consume(purchase);
-                        results.add(new IabResult(BILLING_RESPONSE_RESULT_OK, "Successful consume of sku " + purchase.getSku()));
-                    } catch (IabException ex) {
-                        results.add(ex.getResult());
-                    }
+        (new Thread(() -> {
+            final List<IabResult> results = new ArrayList<>();
+            for (Purchase purchase : purchases) {
+                try {
+                    consume(purchase);
+                    results.add(new IabResult(BILLING_RESPONSE_RESULT_OK, "Successful consume of sku " + purchase.getSku()));
+                } catch (IabException ex) {
+                    results.add(ex.getResult());
                 }
+            }
 
-                flagEndAsync();
-                if (!mDisposed && singleListener != null) {
-                    handler.post(new Runnable() {
-                        public void run() {
-                            singleListener.onConsumeFinished(purchases.get(0), results.get(0));
-                        }
-                    });
-                }
-                if (!mDisposed && multiListener != null) {
-                    handler.post(new Runnable() {
-                        public void run() {
-                            multiListener.onConsumeMultiFinished(purchases, results);
-                        }
-                    });
-                }
+            flagEndAsync();
+            if (!mDisposed && singleListener != null) {
+                handler.post(new Runnable() {
+                    public void run() {
+                        singleListener.onConsumeFinished(purchases.get(0), results.get(0));
+                    }
+                });
+            }
+            if (!mDisposed && multiListener != null) {
+                handler.post(new Runnable() {
+                    public void run() {
+                        multiListener.onConsumeMultiFinished(purchases, results);
+                    }
+                });
             }
         })).start();
     }

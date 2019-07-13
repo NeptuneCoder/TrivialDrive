@@ -1,6 +1,7 @@
 package com.google.pay;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
@@ -13,14 +14,60 @@ import java.util.Map;
 import java.util.Set;
 
 public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
-    private final Activity context;
-    private final String base64EncodedPublicKey;
-    private final GooglePayStatus listener;
+    /**
+     * 默认情况下，自动消耗。
+     */
+    private boolean isAutoConsume;
     private String TAG = this.getClass().getSimpleName();
     private IabBroadcastReceiver mBroadcastReceiver;
     private IabHelper mHelper;
+    private GooglePayStatusListener listener;
+    private String currentBuyType;
 
     static final int RC_REQUEST = 10001;
+
+    public static class Builder {
+        private GooglePayStatusListener listener;
+        private String base64EncodedPublicKey;
+        private Context context;
+        private boolean isAutoConsume;
+
+        public Builder() {
+        }
+
+        public Builder setListener(GooglePayStatusListener listener) {
+            this.listener = listener;
+            return this;
+        }
+
+        public Builder setGoogleKey(String base64EncodedPublicKey) {
+            this.base64EncodedPublicKey = base64EncodedPublicKey;
+            return this;
+        }
+
+        public Builder setisAutoConsume(boolean isAutoConsume) {
+            this.isAutoConsume = isAutoConsume;
+            return this;
+        }
+
+        public Builder setContext(Context context) {
+            this.context = context;
+            return this;
+        }
+
+        public GooglePay build() {
+            if (context == null) {
+                throw new NullPointerException("please set context");
+            }
+            if ("".equals(base64EncodedPublicKey) || base64EncodedPublicKey == null) {
+                throw new NullPointerException("please set base64EncodedPublicKey");
+            }
+            if (listener == null) {
+                throw new NullPointerException("please set GooglePayStatusListener");
+            }
+            return new GooglePay(context, base64EncodedPublicKey, listener, isAutoConsume);
+        }
+    }
 
     /**
      * 初始化Google pay
@@ -29,19 +76,17 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
      * @param base64EncodedPublicKey 购买需要的公钥
      * @param listener               初始化和购买的回调
      */
-    public GooglePay(Activity context, String base64EncodedPublicKey, GooglePayStatus listener) {
-        this.context = context;
-        this.base64EncodedPublicKey = base64EncodedPublicKey;
+    private GooglePay(Context context, String base64EncodedPublicKey, GooglePayStatusListener listener, boolean isAutoConsume) {
         this.listener = listener;
-        init();
+        this.isAutoConsume = isAutoConsume;
+        init(context, base64EncodedPublicKey, listener);
     }
 
     /**
      * 判断是否自动消耗，如果不自动消耗的情况，需要用户手动调用消耗方法，否者下次购买不能成功
      */
-    protected boolean isAutoConsume() {
-        return false;
-
+    private boolean isAutoConsume() {
+        return isAutoConsume;
     }
 
     private IQueryProductDetailListener queryItemDetailListener;
@@ -71,7 +116,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         }
     }
 
-    private void init() {
+    private void init(final Context context, String base64EncodedPublicKey, final GooglePayStatusListener listener) {
         // Some sanity checks to see if the developer (that's you!) really followed the
         // instructions to run this sample (don't put these checks on your app!)
         if (base64EncodedPublicKey.contains("CONSTRUCT_YOUR")) {
@@ -84,49 +129,37 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         // Create the helper, passing it our context and the public key to verify signatures with
         Log.d(TAG, "Creating IAB helper.");
 
-        mHelper = new IabHelper(context, base64EncodedPublicKey, new IabHelperCallbackListener() {
-            @Override
-            public void onGgSuccess(OrderParam data) {
-
-                if (listener != null) {
-                    listener.onBuySuccess(data);
-                }
-            }
-        });
+        mHelper = new IabHelper(context, base64EncodedPublicKey);
 
         // enable debug logging (for a production application, you should set this to false).
         mHelper.enableDebugLogging(false);
-
         // Start setup. This is asynchronous and the specified listener
         // will be called once setup completes.
         Log.d(TAG, "Starting setup.");
-        mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
-            public void onIabSetupFinished(IabResult result) {
-                if (!result.isSuccess()) {
-                    // Oh noes, there was a problem.
+        mHelper.startSetup(result -> {
+            if (!result.isSuccess()) {
+                // Oh noes, there was a problem.
 //                    complain("Problem setting up in-app billing: " + result);
-                    if (listener != null) {
-                        listener.initFailed(true);
-                    }
-                    return;
+                if (listener != null) {
+                    listener.initStatus(false);
                 }
-
-                // Have we been disposed of in the meantime? If so, quit.
-                if (mHelper == null) return;
-
-                // Important: Dynamically register for broadcast messages about updated purchases.
-                // We register the receiver here instead of as a <receiver> in the Manifest
-                // because we always call getPurchases() at startup, so therefore we can ignore
-                // any broadcasts sent while the app isn't running.
-                // Note: registering this listener in an Activity is a bad idea, but is done here
-                // because this is a SAMPLE. Regardless, the receiver must be registered after
-                // IabHelper is setup, but before first call to getPurchases().
-                mBroadcastReceiver = new IabBroadcastReceiver(GooglePay.this);
-                IntentFilter broadcastFilter = new IntentFilter(IabBroadcastReceiver.ACTION);
-                context.registerReceiver(mBroadcastReceiver, broadcastFilter);
-
-
+                return;
+            } else {
+                if (listener != null) {
+                    listener.initStatus(true);
+                }
             }
+
+            // Important: Dynamically register for broadcast messages about updated purchases.
+            // We register the receiver here instead of as a <receiver> in the Manifest
+            // because we always call getPurchases() at startup, so therefore we can ignore
+            // any broadcasts sent while the app isn't running.
+            // Note: registering this listener in an Activity is a bad idea, but is done here
+            // because this is a SAMPLE. Regardless, the receiver must be registered after
+            // IabHelper is setup, but before first call to getPurchases().
+            mBroadcastReceiver = new IabBroadcastReceiver(GooglePay.this);
+            IntentFilter broadcastFilter = new IntentFilter(IabBroadcastReceiver.ACTION);
+            context.registerReceiver(mBroadcastReceiver, broadcastFilter);
         });
     }
 
@@ -146,8 +179,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     /**
      * 暴露给用户，自己控制查询未消耗商品的时机
      */
-    public void handQueryInventoryAsync() {
-        Log.i(">>>>", "handAutoQueryInventoryAsync");
+    public void queryInventoryAsync() {
         try {
             if (mHelper != null) {
                 mHelper.queryInventoryAsync(mGotInventoryListener);
@@ -155,7 +187,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         } catch (IabHelper.IabAsyncInProgressException e) {
 //                    complain("Error querying inventory. Another async operation in progress.");
             if (listener != null) {
-                listener.onGgStatus(GooglePayStatus.QUERY_ERROR);
+                listener.onErrorCode(GooglePayStatusListener.QUERY_ERROR);
             }
         }
     }
@@ -167,10 +199,13 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
 
         public void onQueryInventoryFinished(IabResult result, Inventory inventory) {
             Log.d(TAG, "Query inventory finished.");
-
             // Have we been disposed of in the meantime? If so, quit.
-            if (mHelper == null || result == null) return;
-
+            if (mHelper == null || result == null) {
+                if (queryItemDetailListener != null) {
+                    queryItemDetailListener.queryFailed(400, "query result is null");
+                }
+                return;
+            }
             // Is it a failure?
             if (result.isFailure()) {
                 if (queryItemDetailListener != null) {
@@ -180,26 +215,25 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 Set<Map.Entry<String, SkuDetails>> entries = inventory.mSkuMap.entrySet();
                 if (entries.isEmpty()) {
                     if (queryItemDetailListener != null) {
-                        queryItemDetailListener.queryIdNoExist();
+                        queryItemDetailListener.queryGoodsIdNoExist();
                     }
                 } else {
                     for (Map.Entry<String, SkuDetails> item : entries) {
                         if (queryItemDetailListener != null) {
                             SkuDetails value = item.getValue();
-                            queryItemDetailListener.querySuccess(value.getPriceAmountMicros(), value.getPriceCurrencyCode(), value.getTitle());
+                            queryItemDetailListener.querySuccess(value);
                         }
                     }
                 }
             }
-
-
             Log.d(TAG, "Query inventory was successful.");
-
         }
 
         @Override
         public void onFailed(int status, String string) {
-
+            if (queryItemDetailListener != null) {
+                queryItemDetailListener.queryFailed(status, string);
+            }
         }
     };
     //TODO  购买的时候传入
@@ -215,7 +249,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             // Is it a failure?
             if (result.isFailure()) {
                 if (listener != null) {
-                    listener.onGgStatus(result.mResponse);
+                    listener.onErrorCode(result.mResponse);
                 }
                 return;
             }
@@ -230,7 +264,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
              */
             if (inventory != null) {
                 Set<Map.Entry<String, Purchase>> entries = inventory.mPurchaseMap.entrySet();
-
                 for (Map.Entry<String, Purchase> item : entries) {
                     if (isAutoConsume()) {
                         try {
@@ -238,24 +271,23 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                             Log.d(TAG, "We have gas. Consuming it successful." + item.getKey());
                         } catch (IabHelper.IabAsyncInProgressException e) {
                             if (listener != null) {
-                                listener.onGgStatus(GooglePayStatus.CONSUME_ERROR);
+                                listener.onErrorCode(GooglePayStatusListener.CONSUME_ERROR);
                             }
                         }
                     } else {
                         if (listener != null) {
-                            listener.unConsumeAsync(item.getValue());
+                            listener.unConsumeGoodsInfo(item.getValue());
                         }
                     }
                 }
             }
-
         }
 
         @Override
         public void onFailed(int status, String string) {
             Log.i(">>>>", "string = >" + string);
             if (listener != null) {
-                listener.onGgStatus(status);
+                listener.onErrorCode(status);
             }
         }
     };
@@ -265,7 +297,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             Log.d(TAG, "Consumption finished. Purchase: " + purchase + ", result: " + result);
             // if we were disposed of in the meantime, quit.
             if (mHelper == null) return;
-
             // We know this is the "gas" sku because it's the only one we consume,
             // so we don't check which sku was consumed. If you have more than one
             // sku, you probably should check...
@@ -275,7 +306,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 }
             } else {
                 if (listener != null) {
-                    listener.onGgStatus(GooglePayStatus.CONSUME_FAILED);
+                    listener.onErrorCode(GooglePayStatusListener.CONSUME_FAILED);
                 }
             }
         }
@@ -284,17 +315,15 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener = new IabHelper.OnIabPurchaseFinishedListener() {
         public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
             Log.d(TAG, "Purchase finished: " + result + ", purchase: " + purchase);
-
             // if we were disposed of in the meantime, quit.
             if (mHelper == null) return;
-
             if (result.isFailure()) {
                 if (listener != null && result.mResponse == IabHelper.IABHELPER_USER_CANCELLED) {
                     listener.cancelPurchase();
                 } else if (listener != null && result.mResponse == IabHelper.BILLING_RESPONSE_RESULT_ITEM_ALREADY_OWNED) {
-                    listener.haveGoodsUnConsume();
+                    listener.haveUnConsumeGoods(purchase);
                 } else if (listener != null) {
-                    listener.ohterError(result.mResponse, result.mMessage);
+                    listener.otherError(result.mResponse, result.mMessage);
                 }
                 return;
             }
@@ -306,6 +335,15 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
                 } catch (IabHelper.IabAsyncInProgressException e) {
                     return;
                 }
+            } else {
+
+                if (listener == null) return;
+                OrderParam orderParam = new OrderParam();
+                orderParam.dataSignature = purchase.getSignature();
+                orderParam.purchaseData = purchase.getOriginalJson();
+                orderParam.currBuyType = currentBuyType;
+                listener.onBuySuccess(orderParam);
+
             }
         }
     };
@@ -328,8 +366,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         try {
             mHelper.consumeAsync(purchase, mConsumeFinishedListener);
         } catch (IabHelper.IabAsyncInProgressException e) {
-//                    complain("Error consuming gas. Another async operation in progress.");
-//                    setWaitScreen(false);
             return;
         }
 
@@ -341,7 +377,6 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
         try {
             mHelper.queryInventoryAsync(mGotInventoryListener);
         } catch (IabHelper.IabAsyncInProgressException e) {
-//            complain("Error querying inventory. Another async operation in progress.");
         }
     }
 
@@ -355,13 +390,12 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     public void subsGoods(Activity context, String productId, String payload) {
         Log.i("payload", "subsGoods:" + payload);
         try {
+            currentBuyType = IabHelper.ITEM_TYPE_SUBS;
             mHelper.launchSubscriptionPurchaseFlow(context, productId, RC_REQUEST,
                     mPurchaseFinishedListener, payload);
         } catch (Exception e) {
-//            complain("Error launching purchase flow. Another async operation in progress." + e);
-//            setWaitScreen(false);
             if (listener != null) {
-                listener.onGgStatus(GooglePayStatus.SUBS_FAILED);
+                listener.onErrorCode(GooglePayStatusListener.SUBS_FAILED);
             }
         }
     }
@@ -371,22 +405,22 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
      *
      * @param context
      * @param productId Google play store 后台定义的商品的id。如果错误的话，将提示检索失败
-     * @param payload   该字段随机生成一定长度的字符串，用于生成的订单支付成功后根据google返回的订单信息关联。
+     * @param payload   该字段随机生成一定长度的字符串，用于自己服务器生成的订单编号和支付成功后，google返回的订单编号进行关联。
      */
+
+
     public void buyGoods(Activity context, String productId, String payload) {
-        Log.i("payload", "GpGoods:" + payload);
         try {
+            currentBuyType = IabHelper.ITEM_TYPE_INAPP;
             mHelper.launchPurchaseFlow(context, productId, RC_REQUEST,
                     mPurchaseFinishedListener, payload);
         } catch (IabHelper.IabAsyncInProgressException e) {
-//            complain("Error launching purchase flow. Another async operation in progress.");
-//            setWaitScreen(false);
             if (listener != null) {
-                listener.onGgStatus(GooglePayStatus.INAPP_FAILED);
+                listener.onErrorCode(GooglePayStatusListener.INAPP_FAILED);
             }
         } catch (IllegalStateException e) {
             if (listener != null) {
-                listener.onGgStatus(GooglePayStatus.CHECK_INDENTITY_AUTH);
+                listener.onErrorCode(GooglePayStatusListener.CHECK_INDENTITY_AUTH);
             }
         }
     }
@@ -399,7 +433,7 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
     /**
      * 释放资源，必须调用的方法。
      */
-    public void DestoryQuote() {
+    public void DestoryQuote(Context context) {
         // very important:
         if (mBroadcastReceiver != null) {
             context.unregisterReceiver(mBroadcastReceiver);
@@ -412,5 +446,4 @@ public class GooglePay implements IabBroadcastReceiver.IabBroadcastListener {
             mHelper = null;
         }
     }
-
 }
