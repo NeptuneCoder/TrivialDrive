@@ -4,6 +4,8 @@ Trivial Drive
 Sample for In-App Billing version 3
 
 
+可以直接将ggpaylib直接打包成aar或者是jar文件，copy到项目中即可使用。
+
 [Google pay 接入流程](https://juejin.im/post/5cf407cbf265da1b700491f5)
 
 继上一篇[Google 内购及登录和Facebook登录的KEY 申请和可能遇到的问题](https://www.jianshu.com/p/87ffdb7bc439)，总结一篇客户端和服务器的整体流程。
